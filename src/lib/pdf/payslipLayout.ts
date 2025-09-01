@@ -75,7 +75,9 @@ export const drawPayslipSection = (
   // Calculate financial values
   const otAmount = stats.ot_hours * 60;
   const grossEarnings = employee.gross_salary || (employee.basic_salary + employee.hra + employee.allowances) || 0; // Use monthly gross salary or calculate from components
-  const pf = Math.min(Math.round(grossEarnings * 0.12), 1800);
+  // PF calculation on basic + allowances only (excludes OT)
+  const pfBaseSalary = employee.basic_salary + employee.hra + employee.allowances;
+  const pf = Math.min(Math.round(pfBaseSalary * 0.12), 1800);
   const esi = Math.round(grossEarnings * 0.0075);
   const totalDeductions = pf + esi;
   const netPay = grossEarnings + otAmount - totalDeductions;

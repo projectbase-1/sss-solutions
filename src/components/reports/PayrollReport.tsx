@@ -60,8 +60,8 @@ const PayrollReport = () => {
       const otAmount = Math.round((record.ot_hours || 0) * 60);
       const grossEarnings = basicEarned + daEarned + otAmount;
       
-      // Calculate deductions
-      const pfAmount = Math.min(Math.round(basicEarned * 0.12), 1800);
+      // Calculate deductions (PF on basic + DA only)
+      const pfAmount = Math.min(Math.round((basicEarned + daEarned) * 0.12), 1800);
       const esiAmount = Math.round((basicEarned + daEarned + otAmount) * 0.0075);
       const totalDeductions = pfAmount + esiAmount + (record.rent_deduction || 0) + (record.food || 0);
       const netPay = grossEarnings - totalDeductions + (record.shoe_uniform_allowance || 0);
@@ -96,8 +96,8 @@ const PayrollReport = () => {
         const otAmount = Math.round((record.ot_hours || 0) * 60);
         const grossEarnings = basicEarned + daEarned + otAmount;
         
-        // Calculate deductions
-        const pfAmount = Math.min(Math.round(basicEarned * 0.12), 1800);
+        // Calculate deductions (PF on basic + DA only)
+        const pfAmount = Math.min(Math.round((basicEarned + daEarned) * 0.12), 1800);
         const esiAmount = Math.round((basicEarned + daEarned + otAmount) * 0.0075);
         const totalDeductions = pfAmount + esiAmount + (record.rent_deduction || 0) + (record.food || 0);
         const netPay = grossEarnings - totalDeductions + (record.shoe_uniform_allowance || 0);

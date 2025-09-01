@@ -261,7 +261,7 @@ const PayrollExcelExport = () => {
           const uncappedGrossEarnings = earnedBasic + earnedDA + extraHours;
           const cappedGrossEarnings = Math.min(uncappedGrossEarnings, 15000);
           
-          const uncappedPf = Math.round(earnedBasic * 0.12);
+          const uncappedPf = Math.round((earnedBasic + earnedDA) * 0.12);
           const cappedPf = Math.min(uncappedPf, 1800);
           
           const esi = Math.round(cappedGrossEarnings * 0.0075);

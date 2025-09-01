@@ -57,8 +57,8 @@ const GenerateReportsDialog: React.FC<GenerateReportsDialogProps> = ({
       const earnedDA = Math.round(daAmount * presentDays);
       const otAmount = Math.round(otHours * 60); // ₹60 per hour
       
-      // PF calculation: Basic + DA + OT = Gross Salary
-      const pfBasic = earnedBasic + earnedDA + otAmount;
+      // PF calculation: Basic + DA only (excludes OT)
+      const pfBasic = earnedBasic + earnedDA;
       const emp12Amount = Math.min(Math.round(pfBasic * 0.12), 1800);
       const employerEPF = Math.round(pfBasic * 0.0833); // 8.33% EPF
       const employerEPS = Math.round(pfBasic * 0.0367); // 3.67% EPS

@@ -99,10 +99,12 @@ const EnhancedGenerateReportsDialog: React.FC<EnhancedGenerateReportsDialogProps
         
         // Calculate Basic (60% of per day salary) and DA (40% of per day salary)
         const basicPerDay = Math.round(perDaySalary * 0.60);
+        const daPerDay = Math.round(perDaySalary * 0.40);
         const basicEarned = Math.round(basicPerDay * workedDays);
+        const daEarned = Math.round(daPerDay * workedDays);
         
-        // PF calculation (12% of basic earned, max 1800)
-        const pfAmount = Math.min(Math.round(basicEarned * 0.12), 1800);
+        // PF calculation (12% of basic + DA earned, max 1800)
+        const pfAmount = Math.min(Math.round((basicEarned + daEarned) * 0.12), 1800);
         const epsAmount = Math.round(pfAmount * 0.833); // EPS = 83.3% of PF (max 1250)
         const epfAmount = pfAmount - epsAmount; // EPF = remaining amount
 

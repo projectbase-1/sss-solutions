@@ -538,8 +538,8 @@ const Attendance = () => {
       
       const grossEarnings = earnedBasic + earnedDA + otAmount + allowanceAmount;
       
-      // Calculate deductions with ESI rule
-      const pfAmount = Math.min(Math.round((earnedBasic + earnedDA + otAmount + allowanceAmount) * 0.12), 1800);
+      // Calculate deductions with ESI rule (PF calculated on basic + DA only)
+      const pfAmount = Math.min(Math.round((earnedBasic + earnedDA) * 0.12), 1800);
       const esiAmount = grossEarnings > 21000 ? 0 : Math.round(grossEarnings * 0.0075);
       const totalDeductions = pfAmount + esiAmount + (stats?.food || 0) + (stats?.uniform || 0);
       const takeHome = grossEarnings - totalDeductions;

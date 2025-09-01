@@ -94,8 +94,8 @@ const EnhancedPayrollCalculator: React.FC<PayrollCalculatorProps> = ({
     const uncappedGrossEarnings = earnedBasic + earnedDA + extraHoursPay;
     const grossEarnings = Math.min(uncappedGrossEarnings, 15000); // Cap at 15000
 
-    // Calculate PF (12% of Basic + DA) - CAPPED AT 1800
-    const pfBasic = Math.round((earnedBasic + earnedDA + extraHoursPay));
+    // Calculate PF (12% of Basic + DA only, excludes OT) - CAPPED AT 1800
+    const pfBasic = Math.round((earnedBasic + earnedDA));
     const uncappedPf = Math.round(pfBasic * 0.12);
     const pf12Percent = Math.min(uncappedPf, 1800); // Cap PF at 1800
 

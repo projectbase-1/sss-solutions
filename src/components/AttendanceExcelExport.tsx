@@ -134,8 +134,8 @@ const AttendanceExcelExport: React.FC = () => {
         const extraHours = Math.round(otHours * 60);
         const grossEarnings = basicEarned + daEarned + extraHours;
         
-        // PF calculation (12% of basic earned, max 1800)
-        const pfAmount = Math.min(Math.round(basicEarned * 0.12), 1800);
+        // PF calculation (12% of basic + DA earned, max 1800)
+        const pfAmount = Math.min(Math.round((basicEarned + daEarned) * 0.12), 1800);
         
         // ESI calculation - branch specific logic
         let esiBaseAmount = basicEarned + daEarned;
