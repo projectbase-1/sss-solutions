@@ -43,7 +43,8 @@ const Attendance = () => {
     late_days: 0,
     ot_hours: 0,
     food: 0,
-    uniform: 0
+    uniform: 0,
+    allowance: 0
   });
   const [attendanceForm, setAttendanceForm] = useState({
     branch_id: 'all',
@@ -54,6 +55,7 @@ const Attendance = () => {
     ot_hours: 0,
     food: 0,
     uniform: 0,
+    allowance: 0,
     notes: ''
   });
 
@@ -141,7 +143,8 @@ const Attendance = () => {
       late_days: stats?.late_days || 0,
       ot_hours: stats?.ot_hours || 0,
       food: stats?.food || 0,
-      uniform: stats?.uniform || 0
+      uniform: stats?.uniform || 0,
+      allowance: 0
     });
     setShowEditDialog(true);
   };
@@ -204,6 +207,7 @@ const Attendance = () => {
           ot_hours: otHours,
           food: food,
           uniform: uniform,
+          allowance: Number(attendanceForm.allowance) || 0,
           custom_notes: attendanceForm.notes || '',
           updated_at: new Date().toISOString(),
           month: selectedMonth
@@ -278,6 +282,7 @@ const Attendance = () => {
         ot_hours: 0,
         food: 0,
         uniform: 0,
+        allowance: 0,
         notes: ''
       });
 
@@ -345,6 +350,7 @@ const Attendance = () => {
           ot_hours: Number(editForm.ot_hours) || 0,
           food: Number(editForm.food) || 0,
           uniform: Number(editForm.uniform) || 0,
+          allowance: Number(editForm.allowance) || 0,
           month: selectedMonth,
           updated_at: new Date().toISOString()
         })
@@ -379,7 +385,8 @@ const Attendance = () => {
         late_days: 0,
         ot_hours: 0,
         food: 0,
-        uniform: 0
+        uniform: 0,
+        allowance: 0
       });
       setSelectedEmployeeId('');
       
@@ -454,7 +461,7 @@ const Attendance = () => {
     }
   };
 
-  const handleExcelExport = (exportMonth: string, branchId?: string) => {
+  const handleExcelExport = async (exportMonth: string, branchId?: string) => {
     // Filter employees by branch if specified
     let employeesToExport = employees;
     if (branchId && branchId !== 'all') {
@@ -481,6 +488,28 @@ const Attendance = () => {
       branchName = branch ? `_${branch.name.replace(/\s+/g, '_')}` : '';
     }
 
+    // Fetch attendance records for the month to get allowance data
+    const { data: attendanceRecords } = await supabase
+      .from('attendance')
+      .select('employee_id, notes')
+      .gte('date', `${exportMonth}-01`)
+      .lte('date', `${exportMonth}-31`);
+
+    // Create a map of employee allowances from attendance records
+    const employeeAllowances: Record<string, number> = {};
+    attendanceRecords?.forEach(record => {
+      if (record.notes) {
+        try {
+          const notesData = JSON.parse(record.notes);
+          if (notesData.allowance) {
+            employeeAllowances[record.employee_id] = (employeeAllowances[record.employee_id] || 0) + (notesData.allowance || 0);
+          }
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      }
+    });
+
     // Create Excel-compatible data structure with CORRECTED basic salary calculation
     const excelData = employeesWithData.map((employee, index) => {
       const stats = allEmployeesStats[employee.id];
@@ -504,10 +533,13 @@ const Attendance = () => {
       const employee_obj = employees.find(emp => emp.id === employee.id);
       const rate = employee_obj?.is_driver ? (branch?.driver_rate || 60) : (branch?.ot_rate || 60);
       const otAmount = Math.round((stats?.ot_hours || 0) * rate);
-      const grossEarnings = earnedBasic + earnedDA + otAmount;
+      // Get allowance from attendance records for this month
+      const allowanceAmount = employeeAllowances[employee.id] || 0;
+      
+      const grossEarnings = earnedBasic + earnedDA + otAmount + allowanceAmount;
       
       // Calculate deductions with ESI rule
-      const pfAmount = Math.min(Math.round((earnedBasic + earnedDA + otAmount) * 0.12), 1800);
+      const pfAmount = Math.min(Math.round((earnedBasic + earnedDA + otAmount + allowanceAmount) * 0.12), 1800);
       const esiAmount = grossEarnings > 21000 ? 0 : Math.round(grossEarnings * 0.0075);
       const totalDeductions = pfAmount + esiAmount + (stats?.food || 0) + (stats?.uniform || 0);
       const takeHome = grossEarnings - totalDeductions;
@@ -533,6 +565,7 @@ const Attendance = () => {
         'Advance': employee.advance || 0,
         'Food': stats?.food || 0,
         'Shoe & Uniform': employee.shoe_uniform_allowance || 0,
+        'Allowance': allowanceAmount,
         'Total Deduction': totalDeductions,
         'Take Home': takeHome
       };
@@ -800,6 +833,16 @@ const Attendance = () => {
                       type="number" 
                       value={attendanceForm.uniform} 
                       onChange={(e) => setAttendanceForm({ ...attendanceForm, uniform: parseInt(e.target.value) || 0 })} 
+                      placeholder="0" 
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="allowance">Allowance</Label>
+                    <Input 
+                      id="allowance"
+                      type="number" 
+                      value={attendanceForm.allowance} 
+                      onChange={(e) => setAttendanceForm({ ...attendanceForm, allowance: parseInt(e.target.value) || 0 })} 
                       placeholder="0" 
                     />
                   </div>
@@ -1121,6 +1164,16 @@ const Attendance = () => {
                   type="number" 
                   value={editForm.uniform} 
                   onChange={(e) => setEditForm({ ...editForm, uniform: parseInt(e.target.value) || 0 })} 
+                  placeholder="0" 
+                />
+              </div>
+              <div>
+                <Label htmlFor="editAllowance">Allowance</Label>
+                <Input 
+                  id="editAllowance"
+                  type="number" 
+                  value={editForm.allowance} 
+                  onChange={(e) => setEditForm({ ...editForm, allowance: parseInt(e.target.value) || 0 })} 
                   placeholder="0" 
                 />
               </div>
