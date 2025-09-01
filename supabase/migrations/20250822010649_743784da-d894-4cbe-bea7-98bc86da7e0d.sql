@@ -1,0 +1,17 @@
+-- Add new columns to employees table for DA and day rate calculations
+ALTER TABLE public.employees 
+ADD COLUMN IF NOT EXISTS da_rate NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS day_rate NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS rent_deduction NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS shoe_uniform_allowance NUMERIC DEFAULT 0;
+
+-- Add new columns to payroll table for detailed breakdown
+ALTER TABLE public.payroll 
+ADD COLUMN IF NOT EXISTS da_amount NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS day_salary NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS basic_plus_da NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS extra_hours_pay NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS rent_deduction NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS shoe_uniform_allowance NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS ot_hours NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS ot_rate NUMERIC DEFAULT 0;
