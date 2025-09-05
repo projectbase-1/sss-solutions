@@ -251,11 +251,14 @@ const CustomizedReports = () => {
 
     try {
       // Fetch payroll data for the selected month and employees
+      // Convert exportMonth (YYYY-MM-DD) to YYYY-MM format for database query
+      const monthForQuery = exportMonth.substring(0, 7); // Extract YYYY-MM from YYYY-MM-DD
+      
       const { data: payrollData, error } = await supabase
         .from('payroll')
         .select('*')
         .in('employee_id', employeesToExport.map(emp => emp.id))
-        .eq('month', exportMonth);
+        .eq('month', monthForQuery);
 
       if (error) {
         console.error('Error fetching payroll data:', error);
