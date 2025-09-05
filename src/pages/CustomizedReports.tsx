@@ -254,11 +254,17 @@ const CustomizedReports = () => {
       // Convert exportMonth (YYYY-MM-DD) to YYYY-MM format for database query
       const monthForQuery = exportMonth.substring(0, 7); // Extract YYYY-MM from YYYY-MM-DD
       
+      console.log('DEBUG: Excel Export - exportMonth:', exportMonth);
+      console.log('DEBUG: Excel Export - monthForQuery:', monthForQuery);
+      console.log('DEBUG: Excel Export - employeesToExport:', employeesToExport.map(emp => ({ id: emp.id, name: emp.name, employee_id: emp.employee_id })));
+      
       const { data: payrollData, error } = await supabase
         .from('payroll')
         .select('*')
         .in('employee_id', employeesToExport.map(emp => emp.id))
         .eq('month', monthForQuery);
+
+      console.log('DEBUG: Excel Export - payrollData:', payrollData);
 
       if (error) {
         console.error('Error fetching payroll data:', error);
