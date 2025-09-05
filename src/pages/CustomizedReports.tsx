@@ -11,6 +11,7 @@ import { useEmployees } from '@/hooks/useEmployees';
 import { useAllEmployeesAttendanceStats } from '@/hooks/useEmployeeAttendance';
 import { usePayroll } from '@/hooks/usePayroll';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import ExportDialog from '@/components/ExportDialog';
 import SelectAllCheckbox from '@/components/SelectAllCheckbox';
 import jsPDF from 'jspdf';
@@ -92,8 +93,9 @@ const CustomizedReports = () => {
   const handleExport = (month: string, format: 'excel' | 'pdf', branchId?: string) => {
     if (format === 'pdf') {
       generateEmployeesPDF(month, branchId);
+    } else if (format === 'excel') {
+      generateCustomizedExcel(month, branchId);
     }
-    // Excel export can be added later if needed for customized reports
   };
 
   const generateEmployeesPDF = async (exportMonth: string, filterBranchId?: string) => {
@@ -217,6 +219,155 @@ const CustomizedReports = () => {
       toast({
         title: "Export Error",
         description: "Failed to generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const generateCustomizedExcel = async (exportMonth: string, filterBranchId?: string) => {
+    // Use the employees filtered by selected branch and payment type
+    let employeesToExport = selectedEmployeesData;
+    
+    // If branch filter is applied and it's different from current selected branch, filter employees
+    if (filterBranchId && filterBranchId !== selectedBranch) {
+      employeesToExport = selectedEmployeesData.filter(emp => emp.branch_id === filterBranchId);
+    }
+    
+    // Apply payment type filter if selected
+    if (selectedPaymentType && selectedPaymentType !== 'all') {
+      employeesToExport = employeesToExport.filter(emp => emp.mode_of_payment === selectedPaymentType);
+    }
+
+    if (employeesToExport.length === 0) {
+      const branchText = filterBranchId ? ' for selected branch' : '';
+      const paymentText = selectedPaymentType && selectedPaymentType !== 'all' ? ` with ${selectedPaymentType.toLowerCase()} payment type` : '';
+      toast({
+        title: "Error",
+        description: `Please select at least one employee${branchText}${paymentText} to generate report`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Fetch payroll data for the selected month and employees
+      const { data: payrollData, error } = await supabase
+        .from('payroll')
+        .select('*')
+        .in('employee_id', employeesToExport.map(emp => emp.id))
+        .eq('month', exportMonth);
+
+      if (error) {
+        console.error('Error fetching payroll data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch payroll data. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check if we have payroll data
+      if (!payrollData || payrollData.length === 0) {
+        toast({
+          title: "No Data Found",
+          description: `No payroll data found for selected employees in ${new Date(exportMonth).toLocaleString('default', { month: 'long', year: 'numeric' })}.`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const XLSX = await import('xlsx');
+      
+      // Generate Excel data based on payment type
+      let excelData;
+      let fileName;
+      
+      if (selectedPaymentType === 'BANK') {
+        // Bank payment format
+        excelData = employeesToExport
+          .filter(employee => payrollData.some(payroll => payroll.employee_id === employee.id))
+          .map((employee, index) => {
+            const payroll = payrollData.find(p => p.employee_id === employee.id);
+            return {
+              'Sl.No': index + 1,
+              'EMP.NO': employee.employee_id || '',
+              'ACCOUNT HOLDER NAME': employee.name || '',
+              'AMOUNT': payroll?.take_home || payroll?.net_pay || 0,
+              'ACCOUNT NO': employee.account_number || '',
+              'IFSC CODE': employee.ifsc_code || '',
+              'NAME OF THE BANK': employee.bank_name || ''
+            };
+          });
+        
+        const branchName = filterBranchId ? `_${branches.find(b => b.id === filterBranchId)?.name?.replace(/\s+/g, '_') || ''}` : '';
+        fileName = `Bank_Payment_Report${branchName}_${exportMonth}.xlsx`;
+      } else if (selectedPaymentType === 'CASH') {
+        // Cash payment format
+        excelData = employeesToExport
+          .filter(employee => payrollData.some(payroll => payroll.employee_id === employee.id))
+          .map((employee, index) => {
+            const payroll = payrollData.find(p => p.employee_id === employee.id);
+            return {
+              'Sl.No': index + 1,
+              'EMP.NO': employee.employee_id || '',
+              'EMPLOYEE NAME': employee.name || '',
+              'AMOUNT': payroll?.take_home || payroll?.net_pay || 0
+            };
+          });
+        
+        const branchName = filterBranchId ? `_${branches.find(b => b.id === filterBranchId)?.name?.replace(/\s+/g, '_') || ''}` : '';
+        fileName = `Cash_Payment_Report${branchName}_${exportMonth}.xlsx`;
+      } else {
+        // Default format for mixed payment types
+        excelData = employeesToExport
+          .filter(employee => payrollData.some(payroll => payroll.employee_id === employee.id))
+          .map((employee, index) => {
+            const payroll = payrollData.find(p => p.employee_id === employee.id);
+            return {
+              'Sl.No': index + 1,
+              'EMP.NO': employee.employee_id || '',
+              'EMPLOYEE NAME': employee.name || '',
+              'PAYMENT TYPE': employee.mode_of_payment || '',
+              'AMOUNT': payroll?.take_home || payroll?.net_pay || 0,
+              'ACCOUNT NO': employee.account_number || '',
+              'IFSC CODE': employee.ifsc_code || '',
+              'BANK NAME': employee.bank_name || ''
+            };
+          });
+        
+        const branchName = filterBranchId ? `_${branches.find(b => b.id === filterBranchId)?.name?.replace(/\s+/g, '_') || ''}` : '';
+        fileName = `Customized_Payment_Report${branchName}_${exportMonth}.xlsx`;
+      }
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      
+      // Auto-size columns
+      const colWidths = Object.keys(excelData[0] || {}).map(key => ({
+        wch: Math.max(key.length, 15)
+      }));
+      worksheet['!cols'] = colWidths;
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Payment Report');
+      
+      // Download the Excel file
+      XLSX.writeFile(workbook, fileName);
+
+      const branchText = filterBranchId ? ' for selected branch' : '';
+      const paymentText = selectedPaymentType && selectedPaymentType !== 'all' ? ` (${selectedPaymentType.toLowerCase()} payment type)` : '';
+      toast({
+        title: "Success",
+        description: `Excel report${branchText}${paymentText} for ${new Date(exportMonth).toLocaleString('default', { month: 'long', year: 'numeric' })} with ${excelData.length} employee(s) downloaded successfully.`,
+      });
+      
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      toast({
+        title: "Export Error",
+        description: "Failed to generate Excel file. Please try again.",
         variant: "destructive"
       });
     }
@@ -395,7 +546,7 @@ const CustomizedReports = () => {
         onOpenChange={setShowExportDialog}
         onExport={handleExport}
         title="Export Employee Reports"
-        description="Select a month to generate customized employee reports"
+        description="Select a month to generate customized employee reports (PDF or Excel)"
         showBranchSelection={false}
       />
     </div>
